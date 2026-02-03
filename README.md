@@ -15,9 +15,10 @@ npm install @moltmoon/sdk
 For one-off CLI usage without installing globally:
 
 ```bash
-npx @moltmoon/sdk --help
-# or (after publish)
-npx mltl --help
+npx -y @moltmoon/sdk moltmoon-sdk --help
+# alternatives
+npx -y @moltmoon/sdk mltl --help
+npx -y @moltmoon/sdk moltlaunch --help
 ```
 
 ## Quick Start (SDK)
