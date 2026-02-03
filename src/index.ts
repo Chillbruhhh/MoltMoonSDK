@@ -163,7 +163,7 @@ export class MoltmoonSDK {
         if (!/^[A-Za-z0-9]{2,12}$/.test(symbol)) throw new Error('Token symbol must be 2-12 alphanumeric characters.');
         if (description.length < 5 || description.length > 500) throw new Error('Description must be 5-500 characters.');
         const seed = Number(params.seedAmount);
-        if (!Number.isFinite(seed) || seed <= 0) throw new Error('Seed amount must be a positive number.');
+        if (!Number.isFinite(seed) || seed < 20) throw new Error('Seed amount must be at least 20 USDC.');
     }
 
     private async buildLaunchMetadata(params: LaunchParams): Promise<{ metadataURI: string; imageUrl?: string }> {

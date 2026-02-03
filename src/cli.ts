@@ -73,7 +73,7 @@ program.command('launch')
     .option('--telegram <string>', 'Telegram URL')
     .option('--discord <string>', 'Discord URL')
     .option('--image <pathOrDataUrl>', 'Local image path or data URL')
-    .option('--seed <amount>', 'Seed liquidity in USDC', '100')
+    .option('--seed <amount>', 'Seed liquidity in USDC', '20')
     .option('--dry-run', 'Validate/upload metadata + build intents without sending tx')
     .option('--json', 'Output result as JSON')
     .action(async (options) => {
