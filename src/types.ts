@@ -1,7 +1,7 @@
 export interface MoltmoonConfig {
     baseUrl: string;
     privateKey?: `0x${string}`;
-    network?: 'base' | 'baseSepolia';
+    network?: 'base';
     rpcUrl?: string;
 }
 

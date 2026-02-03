@@ -1,8 +1,8 @@
 # @moltmoon/sdk
 
-Official TypeScript SDK + CLI for MoltMoon token launch/trading workflows.
+Official TypeScript SDK + CLI for MoltMoon token launch/trading workflows on Base mainnet.
 
-- Network support: `base` and `baseSepolia`
+- Network support: `base` only
 - Interfaces: TypeScript SDK and `moltlaunch` / `mltl` CLI
 - Core actions: launch token, list tokens, buy, sell, quote buy/sell
 
@@ -28,7 +28,7 @@ import { MoltmoonSDK } from '@moltmoon/sdk';
 
 const sdk = new MoltmoonSDK({
   baseUrl: 'https://api.moltmoon.xyz',
-  network: 'base', // 'base' | 'baseSepolia'
+  network: 'base',
   privateKey: process.env.MOLTMOON_PRIVATE_KEY as `0x${string}`
 });
 
@@ -53,14 +53,14 @@ console.log(result.hash);
 new MoltmoonSDK({
   baseUrl: string,
   privateKey?: `0x${string}`,
-  network?: 'base' | 'baseSepolia',
+  network?: 'base',
   rpcUrl?: string
 })
 ```
 
 - `baseUrl`: API endpoint (example: `https://api.moltmoon.xyz`)
 - `privateKey`: required for any write action (launch/buy/sell)
-- `network`: chain selection for tx signing/sending
+- `network`: fixed to `base` for tx signing/sending
 - `rpcUrl`: optional custom RPC URL
 
 ### Read methods
@@ -91,7 +91,7 @@ Binary names:
 Global options:
 
 - `--api-url <url>` API base URL (default: `https://api.moltmoon.xyz`)
-- `--network <base|baseSepolia>` chain
+- `--network <base>` chain
 - `--private-key <0x...>` signer private key
 - `--dry-run` launch validation mode (builds intents, no tx broadcast)
 
@@ -108,7 +108,7 @@ npx mltl launch \
   --discord "https://discord.gg/moltmoon" \
   --image "./assets/logo.png" \
   --seed 10 \
-  --network baseSepolia \
+  --network base \
   --json
 ```
 
@@ -165,7 +165,7 @@ npx mltl quote-sell --market 0xMARKET --tokens 50 --json
 Supported env vars (CLI):
 
 - `MOLTMOON_API_URL`
-- `MOLTMOON_NETWORK` (`base` or `baseSepolia`)
+- `MOLTMOON_NETWORK` (`base`)
 - `MOLTMOON_PRIVATE_KEY`
 - `PRIVATE_KEY` (fallback)
 

@@ -1,6 +1,6 @@
 ---
 name: moltmoon_sdk_operator
-description: Operational playbook for AI agents using @moltmoon/sdk to launch tokens, fetch market data, and execute buy/sell actions safely on Base or Base Sepolia.
+description: Operational playbook for AI agents using @moltmoon/sdk to launch tokens, fetch market data, and execute buy/sell actions safely on Base mainnet.
 ---
 
 # MoltMoon SDK Operator Skill
@@ -16,7 +16,7 @@ This skill covers:
 - Reading token/market/quote data
 - Buying and selling through market intents
 - Safe network + wallet configuration
-- Operator runbooks for testnet and production
+- Operator runbooks for production
 
 This skill does not cover:
 
@@ -57,7 +57,7 @@ import { MoltmoonSDK } from '@moltmoon/sdk';
 
 const sdk = new MoltmoonSDK({
   baseUrl: process.env.MOLTMOON_API_URL || 'https://api.moltmoon.xyz',
-  network: (process.env.MOLTMOON_NETWORK as 'base' | 'baseSepolia') || 'base',
+  network: 'base',
   privateKey: process.env.MOLTMOON_PRIVATE_KEY as `0x${string}`
 });
 ```
@@ -102,7 +102,7 @@ npx mltl launch \
   --discord "https://discord.gg/agent" \
   --image "./assets/logo.png" \
   --seed 10 \
-  --network baseSepolia \
+  --network base \
   --json
 ```
 
@@ -167,7 +167,7 @@ Before any production write action:
 - Never print private keys in logs.
 - Never commit `.env`.
 - Use dedicated hot wallet for tx execution; hold treasury in multisig.
-- Prefer testnet (`baseSepolia`) for dry-runs before production changes.
+- Use `--dry-run` for non-broadcast validation before production writes.
 
 ## Expected JSON Shapes
 

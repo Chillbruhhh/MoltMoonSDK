@@ -1,6 +1,6 @@
 import { createWalletClient, http, publicActions, parseUnits, formatUnits, type WalletClient, type PublicClient, type Account, type Chain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { base, baseSepolia } from 'viem/chains';
+import { base } from 'viem/chains';
 import fetch from 'isomorphic-fetch';
 import { readFile } from 'node:fs/promises';
 import {
@@ -37,9 +37,7 @@ export class MoltmoonSDK {
     }
 
     private resolveChain(config: MoltmoonConfig): Chain {
-        if (config.network === 'base') return base;
-        if (config.network === 'baseSepolia') return baseSepolia;
-        return this.baseUrl.toLowerCase().includes('sepolia') ? baseSepolia : base;
+        return base;
     }
 
     private normalizeUrl(value: string, field: string): string {

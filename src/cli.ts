@@ -8,7 +8,7 @@ dotenv.config();
 
 type CliOptions = {
     apiUrl?: string;
-    network?: 'base' | 'baseSepolia';
+    network?: 'base';
     privateKey?: string;
 };
 
@@ -27,17 +27,19 @@ function resolveBaseUrl(options: CliOptions): string {
     return options.apiUrl || process.env.MOLTMOON_API_URL || DEFAULT_API_URL;
 }
 
-function resolveNetwork(options: CliOptions, baseUrl: string): 'base' | 'baseSepolia' {
-    if (options.network) return options.network;
-    if (process.env.MOLTMOON_NETWORK === 'base' || process.env.MOLTMOON_NETWORK === 'baseSepolia') {
-        return process.env.MOLTMOON_NETWORK;
+function resolveNetwork(options: CliOptions): 'base' {
+    if (options.network && options.network !== 'base') {
+        fail(`Unsupported network "${options.network}". Only "base" is supported.`);
     }
-    return baseUrl.toLowerCase().includes('sepolia') ? 'baseSepolia' : 'base';
+    if (process.env.MOLTMOON_NETWORK && process.env.MOLTMOON_NETWORK !== 'base') {
+        fail(`Unsupported MOLTMOON_NETWORK "${process.env.MOLTMOON_NETWORK}". Only "base" is supported.`);
+    }
+    return 'base';
 }
 
 function createSDK(options: CliOptions, requireSigner = false): MoltmoonSDK {
     const baseUrl = resolveBaseUrl(options);
-    const network = resolveNetwork(options, baseUrl);
+    const network = resolveNetwork(options);
     const privateKey = (options.privateKey || process.env.MOLTMOON_PRIVATE_KEY || process.env.PRIVATE_KEY) as `0x${string}` | undefined;
 
     if (requireSigner && !privateKey) {
@@ -60,7 +62,7 @@ program
     .description('Moltmoon Launchpad CLI')
     .version('0.2.0')
     .option('--api-url <url>', 'API base URL (default: https://api.moltmoon.xyz)')
-    .option('--network <network>', 'base | baseSepolia')
+    .option('--network <network>', 'base')
     .option('--private-key <hex>', 'Signer private key (0x...)');
 
 program.command('launch')
@@ -116,7 +118,7 @@ program.command('launch')
 
             console.log('Success!');
             console.log(`Hash: ${result.hash}`);
-            console.log(`Explorer: https://${resolveNetwork(global, resolveBaseUrl(global)) === 'base' ? 'basescan.org' : 'sepolia.basescan.org'}/tx/${result.hash}`);
+            console.log(`Explorer: https://basescan.org/tx/${result.hash}`);
         } catch (error: any) {
             fail(error.message, options.json);
         }
