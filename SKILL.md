@@ -156,7 +156,7 @@ Before any production write action:
 
 - `Unsupported image format` / image validation errors
   - Cause: non-PNG/JPEG file, too large, bad dimensions, or non-square-ish logo
-  - Fix: use PNG/JPEG, <=5MB, and near-square dimensions (200-2048 px range)
+  - Fix: use PNG/JPEG, <=500KB (<=100KB recommended), square dimensions in 512-2048 px range
 
 - `private key too short`
   - Cause: malformed key

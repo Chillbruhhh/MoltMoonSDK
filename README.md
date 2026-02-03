@@ -187,9 +187,9 @@ MOLTMOON_PRIVATE_KEY=0x...
 ## Image Requirements
 
 - `PNG` or `JPEG`
-- Max file size: `5MB`
-- Dimensions: min `200x200`, max `2048x2048`
-- Aspect ratio: near-square (token logo format)
+- Max file size: `500KB` hard cap (`100KB` recommended)
+- Dimensions: min `512x512`, max `2048x2048`
+- Aspect ratio: square (1:1)
 
 ## Development
 

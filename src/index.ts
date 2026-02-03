@@ -18,6 +18,9 @@ export class MoltmoonSDK {
     private client?: WalletClient & PublicClient;
     private account?: Account;
     private chain: Chain;
+    private readonly imageMaxBytes = 500 * 1024; // hard cap
+    private readonly imageMinDim = 512;
+    private readonly imageMaxDim = 2048;
 
     constructor(config: MoltmoonConfig) {
         this.baseUrl = config.baseUrl.replace(/\/+$/, '');
@@ -90,25 +93,46 @@ export class MoltmoonSDK {
 
     private validateImageShape(dimensions: { width: number; height: number }): void {
         const { width, height } = dimensions;
-        const minDim = 200;
-        const maxDim = 2048;
+        const minDim = this.imageMinDim;
+        const maxDim = this.imageMaxDim;
         if (width < minDim || height < minDim) {
             throw new Error(`Image too small (${width}x${height}). Minimum is ${minDim}x${minDim}.`);
         }
         if (width > maxDim || height > maxDim) {
             throw new Error(`Image too large (${width}x${height}). Maximum is ${maxDim}x${maxDim}.`);
         }
-        const ratio = width / height;
-        if (ratio < 0.9 || ratio > 1.1) {
-            throw new Error(`Image should be near-square. Got ${width}x${height}.`);
+        if (Math.abs(width - height) > 2) {
+            throw new Error(`Image must be square. Got ${width}x${height}.`);
         }
+    }
+
+    private normalizeDataUrlImage(dataUrl: string): string {
+        const match = dataUrl.match(/^data:(image\/(?:png|jpeg|jpg));base64,([A-Za-z0-9+/=]+)$/i);
+        if (!match) {
+            throw new Error('Invalid data URL image. Use base64 PNG or JPEG.');
+        }
+
+        const claimedMime = match[1].toLowerCase();
+        const imageBuffer = Buffer.from(match[2], 'base64');
+        if (imageBuffer.length > this.imageMaxBytes) {
+            throw new Error(`Image exceeds ${this.imageMaxBytes / 1024}KB hard cap.`);
+        }
+
+        const imageType = this.detectImageType(imageBuffer);
+        if (claimedMime !== imageType.mime && !(claimedMime === 'image/jpg' && imageType.mime === 'image/jpeg')) {
+            throw new Error(`Image MIME/content mismatch. Claimed ${claimedMime}, detected ${imageType.mime}.`);
+        }
+
+        const dimensions = this.parseImageDimensions(imageBuffer, imageType.mime);
+        this.validateImageShape(dimensions);
+        return `data:${imageType.mime};base64,${imageBuffer.toString('base64')}`;
     }
 
     private async normalizeImageInput(imageFile: LaunchParams['imageFile']): Promise<string | undefined> {
         if (!imageFile) return undefined;
 
         if (typeof imageFile === 'string' && imageFile.startsWith('data:image/')) {
-            return imageFile;
+            return this.normalizeDataUrlImage(imageFile);
         }
 
         let imageBuffer: Buffer;
@@ -120,9 +144,9 @@ export class MoltmoonSDK {
             throw new Error('Unsupported imageFile type. Use Buffer, data URL, or local file path.');
         }
 
-        const maxBytes = 5 * 1024 * 1024;
+        const maxBytes = this.imageMaxBytes;
         if (imageBuffer.length > maxBytes) {
-            throw new Error(`Image exceeds ${maxBytes / (1024 * 1024)}MB limit.`);
+            throw new Error(`Image exceeds ${maxBytes / 1024}KB hard cap.`);
         }
 
         const imageType = this.detectImageType(imageBuffer);
