@@ -1,6 +1,8 @@
 export interface MoltmoonConfig {
     baseUrl: string;
     privateKey?: `0x${string}`;
+    network?: 'base' | 'baseSepolia';
+    rpcUrl?: string;
 }
 
 export interface TokenMetadata {

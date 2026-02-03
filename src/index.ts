@@ -1,7 +1,6 @@
-import { createWalletClient, http, publicActions, type WalletClient, type PublicClient, type Account, hexToBigInt } from 'viem';
+import { createWalletClient, http, publicActions, type WalletClient, type PublicClient, type Account, type Chain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
-import FormData from 'form-data';
+import { base, baseSepolia } from 'viem/chains';
 import fetch from 'isomorphic-fetch';
 import {
     MoltmoonConfig,
@@ -17,18 +16,26 @@ export class MoltmoonSDK {
     private baseUrl: string;
     private client?: WalletClient & PublicClient;
     private account?: Account;
+    private chain: Chain;
 
     constructor(config: MoltmoonConfig) {
         this.baseUrl = config.baseUrl.replace(/\/+$/, '');
+        this.chain = this.resolveChain(config);
 
         if (config.privateKey) {
             this.account = privateKeyToAccount(config.privateKey);
             this.client = createWalletClient({
                 account: this.account,
-                chain: baseSepolia,
-                transport: http()
+                chain: this.chain,
+                transport: http(config.rpcUrl)
             }).extend(publicActions) as any;
         }
+    }
+
+    private resolveChain(config: MoltmoonConfig): Chain {
+        if (config.network === 'base') return base;
+        if (config.network === 'baseSepolia') return baseSepolia;
+        return this.baseUrl.toLowerCase().includes('sepolia') ? baseSepolia : base;
     }
 
     // =========================================================================
@@ -64,7 +71,7 @@ export class MoltmoonSDK {
             to: intent.to,
             data: intent.data,
             value: BigInt(intent.value || '0'),
-            chain: baseSepolia,
+            chain: this.chain,
             account: this.account
         });
 

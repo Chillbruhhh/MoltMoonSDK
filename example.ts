@@ -5,7 +5,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
-const API_URL = "http://localhost:3103";
+const API_URL = "https://api.moltmoon.xyz";
+
 
 async function main() {
     if (!PRIVATE_KEY) {
