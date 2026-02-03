@@ -2,14 +2,15 @@ import { createWalletClient, http, publicActions, type WalletClient, type Public
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, baseSepolia } from 'viem/chains';
 import fetch from 'isomorphic-fetch';
+import { readFile } from 'node:fs/promises';
 import {
     MoltmoonConfig,
     LaunchParams,
+    LaunchPreparation,
     Token,
     MarketDetails,
     QuoteResponse,
     TransactionIntent,
-    TokenMetadata
 } from './types';
 
 export class MoltmoonSDK {
@@ -36,6 +37,141 @@ export class MoltmoonSDK {
         if (config.network === 'base') return base;
         if (config.network === 'baseSepolia') return baseSepolia;
         return this.baseUrl.toLowerCase().includes('sepolia') ? baseSepolia : base;
+    }
+
+    private normalizeUrl(value: string, field: string): string {
+        try {
+            return new URL(value).toString();
+        } catch {
+            throw new Error(`Invalid ${field} URL: ${value}`);
+        }
+    }
+
+    private parseImageDimensions(buffer: Buffer, mime: string): { width: number; height: number } {
+        if (mime === 'image/png') {
+            if (buffer.length < 24) throw new Error('Invalid PNG image');
+            return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+        }
+
+        if (mime === 'image/jpeg') {
+            let offset = 2;
+            while (offset < buffer.length) {
+                if (buffer[offset] !== 0xFF) {
+                    offset++;
+                    continue;
+                }
+                const marker = buffer[offset + 1];
+                const hasDimensions = marker >= 0xC0 && marker <= 0xCF && ![0xC4, 0xC8, 0xCC].includes(marker);
+                const segmentLength = buffer.readUInt16BE(offset + 2);
+                if (hasDimensions) {
+                    if (offset + 9 >= buffer.length) break;
+                    return {
+                        height: buffer.readUInt16BE(offset + 5),
+                        width: buffer.readUInt16BE(offset + 7)
+                    };
+                }
+                offset += 2 + segmentLength;
+            }
+            throw new Error('Could not parse JPEG dimensions');
+        }
+
+        throw new Error(`Unsupported image MIME type for dimension checks: ${mime}`);
+    }
+
+    private detectImageType(buffer: Buffer): { mime: 'image/png' | 'image/jpeg'; ext: 'png' | 'jpg' } {
+        const isPng = buffer.length > 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]));
+        if (isPng) return { mime: 'image/png', ext: 'png' };
+
+        const isJpeg = buffer.length > 3 && buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+        if (isJpeg) return { mime: 'image/jpeg', ext: 'jpg' };
+
+        throw new Error('Unsupported image format. Use PNG or JPEG.');
+    }
+
+    private validateImageShape(dimensions: { width: number; height: number }): void {
+        const { width, height } = dimensions;
+        const minDim = 200;
+        const maxDim = 2048;
+        if (width < minDim || height < minDim) {
+            throw new Error(`Image too small (${width}x${height}). Minimum is ${minDim}x${minDim}.`);
+        }
+        if (width > maxDim || height > maxDim) {
+            throw new Error(`Image too large (${width}x${height}). Maximum is ${maxDim}x${maxDim}.`);
+        }
+        const ratio = width / height;
+        if (ratio < 0.9 || ratio > 1.1) {
+            throw new Error(`Image should be near-square. Got ${width}x${height}.`);
+        }
+    }
+
+    private async normalizeImageInput(imageFile: LaunchParams['imageFile']): Promise<string | undefined> {
+        if (!imageFile) return undefined;
+
+        if (typeof imageFile === 'string' && imageFile.startsWith('data:image/')) {
+            return imageFile;
+        }
+
+        let imageBuffer: Buffer;
+        if (Buffer.isBuffer(imageFile)) {
+            imageBuffer = imageFile;
+        } else if (typeof imageFile === 'string') {
+            imageBuffer = await readFile(imageFile);
+        } else {
+            throw new Error('Unsupported imageFile type. Use Buffer, data URL, or local file path.');
+        }
+
+        const maxBytes = 5 * 1024 * 1024;
+        if (imageBuffer.length > maxBytes) {
+            throw new Error(`Image exceeds ${maxBytes / (1024 * 1024)}MB limit.`);
+        }
+
+        const imageType = this.detectImageType(imageBuffer);
+        const dimensions = this.parseImageDimensions(imageBuffer, imageType.mime);
+        this.validateImageShape(dimensions);
+        return `data:${imageType.mime};base64,${imageBuffer.toString('base64')}`;
+    }
+
+    private validateLaunchParams(params: LaunchParams): void {
+        const name = params.name.trim();
+        const symbol = params.symbol.trim();
+        const description = params.description.trim();
+        if (name.length < 2 || name.length > 64) throw new Error('Token name must be 2-64 characters.');
+        if (!/^[A-Za-z0-9]{2,12}$/.test(symbol)) throw new Error('Token symbol must be 2-12 alphanumeric characters.');
+        if (description.length < 5 || description.length > 500) throw new Error('Description must be 5-500 characters.');
+        const seed = Number(params.seedAmount);
+        if (!Number.isFinite(seed) || seed <= 0) throw new Error('Seed amount must be a positive number.');
+    }
+
+    private async buildLaunchMetadata(params: LaunchParams): Promise<{ metadataURI: string; imageUrl?: string }> {
+        this.validateLaunchParams(params);
+        let imageUrl = '';
+        const imageDataUrl = await this.normalizeImageInput(params.imageFile);
+
+        if (imageDataUrl) {
+            const res = await this.request<{ url: string }>('/upload/image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageDataUrl })
+            });
+            imageUrl = res.url;
+        }
+
+        const metadata: any = {
+            name: params.name.trim(),
+            symbol: params.symbol.trim(),
+            description: params.description.trim(),
+            external_url: 'https://moltmoon.xyz',
+            platform: 'Built with MoltMoon SDK'
+        };
+
+        if (imageUrl) metadata.image = imageUrl;
+        if (params.socials?.website) metadata.website = this.normalizeUrl(params.socials.website, 'website');
+        if (params.socials?.twitter) metadata.twitter = this.normalizeUrl(params.socials.twitter, 'twitter');
+        if (params.socials?.telegram) metadata.telegram = this.normalizeUrl(params.socials.telegram, 'telegram');
+        if (params.socials?.discord) metadata.discord = this.normalizeUrl(params.socials.discord, 'discord');
+
+        const metadataURI = `data:application/json;base64,${Buffer.from(JSON.stringify(metadata)).toString('base64')}`;
+        return { metadataURI, imageUrl: imageUrl || undefined };
     }
 
     // =========================================================================
@@ -117,78 +253,34 @@ export class MoltmoonSDK {
     // Action Methods
     // =========================================================================
 
-    /**
-     * Launch a new token.
-     * Handles: Image Upload -> Approve Seed -> Create Token
-     */
-    async launchToken(params: LaunchParams): Promise<{ hash: string, tokenAddress?: string }> {
-        let imageUrl = "";
-
-        // 1. Upload Image (if provided)
-        if (params.imageFile) {
-            // Logic depends on environment (Buffer vs File). Assuming Node.js Buffer or Stream for now.
-            // Ideally user passes base64 string or we handle form-data.
-            // For simplicity in this SDK version, let's assume raw base64 string if it starts with "data:", 
-            // otherwise straightforward logic if we want to support streams would need 'form-data' package properly.
-
-            // If user passed a Buffer/Stream, we'd use FormData. 
-            // Here we will support a direct base64 string for simplicity or try to upload buffer.
-
-            // NOTE: Our API expects JSON body with base64 string for this endpoint in index.ts:
-            // app.post("/upload/image", ... { image: "data:..." })
-
-            let base64Image = params.imageFile;
-            if (Buffer.isBuffer(params.imageFile)) {
-                base64Image = `data:image/png;base64,${params.imageFile.toString('base64')}`;
-            }
-
-            const res = await this.request<{ url: string }>('/upload/image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: base64Image })
-            });
-            imageUrl = res.url;
-        }
-
-        // 2. Prepare Metadata URI
-        const metadata: any = {
-            name: params.name,
-            symbol: params.symbol,
-            description: params.description,
-            external_url: "https://moltmoon.xyz",
-            platform: "Built with MoltMoon SDK"
-        };
-        if (imageUrl) metadata.image = imageUrl;
-        if (params.socials) {
-            if (params.socials.website) metadata.website = params.socials.website;
-            if (params.socials.twitter) metadata.twitter = params.socials.twitter;
-        }
-
-        const metadataJSON = JSON.stringify(metadata);
-        const metadataURI = `data:application/json;base64,${Buffer.from(metadataJSON).toString('base64')}`;
-
-        // 3. Approve Seed USDC
+    async prepareLaunchToken(params: LaunchParams): Promise<LaunchPreparation> {
+        const { metadataURI, imageUrl } = await this.buildLaunchMetadata(params);
         const approveIntent = await this.request<TransactionIntent>('/intent/factory/approve-seed', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ amount: params.seedAmount })
         });
-
-        // We execute approval. Failure here throws error.
-        await this.executeIntent(approveIntent);
-
-        // 4. Create Token
         const createIntent = await this.request<TransactionIntent>('/intent/tokens/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                name: params.name,
-                symbol: params.symbol,
+                name: params.name.trim(),
+                symbol: params.symbol.trim(),
                 uri: metadataURI,
                 seedAmount: params.seedAmount
             })
         });
+        return { metadataURI, imageUrl, approveIntent, createIntent };
+    }
 
+    /**
+     * Launch a new token.
+     * Handles: Image Upload -> Metadata -> Approve Seed -> Create Token
+     */
+    async launchToken(params: LaunchParams): Promise<{ hash: string, tokenAddress?: string }> {
+        const prep = await this.prepareLaunchToken(params);
+        await this.executeIntent(prep.approveIntent);
+        const createIntent = prep.createIntent;
         const hash = await this.executeIntent(createIntent);
 
         // Determining token address would require decoding logs, 

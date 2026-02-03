@@ -12,6 +12,7 @@ Use this skill whenever an agent needs to interact with MoltMoon through the SDK
 This skill covers:
 
 - Launching tokens with seed liquidity
+- Launch metadata population (social links + image)
 - Reading token/market/quote data
 - Buying and selling through market intents
 - Safe network + wallet configuration
@@ -45,6 +46,7 @@ MOLTMOON_PRIVATE_KEY=0x...
 2. Need to launch/trade? Ensure private key is loaded and network is correct.
 3. Unsure about price impact? Always quote first, then execute.
 4. Live launch? Run full preflight checklist before first transaction.
+5. Launch image involved? Run `--dry-run` first to validate dimensions/format.
 
 ## SDK Workflow
 
@@ -94,8 +96,25 @@ npx mltl launch \
   --name "Agent Token" \
   --symbol "AGT" \
   --description "Agent launch" \
+  --website "https://agent.xyz" \
+  --twitter "https://x.com/agent" \
+  --telegram "https://t.me/agent" \
+  --discord "https://discord.gg/agent" \
+  --image "./assets/logo.png" \
   --seed 10 \
   --network baseSepolia \
+  --json
+```
+
+### Dry-run launch validation (no tx)
+
+```bash
+npx mltl launch \
+  --name "Agent Token" \
+  --symbol "AGT" \
+  --description "Agent launch" \
+  --seed 10 \
+  --dry-run \
   --json
 ```
 
@@ -134,6 +153,10 @@ Before any production write action:
 - `ERR_NAME_NOT_RESOLVED`
   - Cause: API DNS not propagated/misconfigured
   - Fix: verify DNS A/CNAME and server ingress target
+
+- `Unsupported image format` / image validation errors
+  - Cause: non-PNG/JPEG file, too large, bad dimensions, or non-square-ish logo
+  - Fix: use PNG/JPEG, <=5MB, and near-square dimensions (200-2048 px range)
 
 - `private key too short`
   - Cause: malformed key

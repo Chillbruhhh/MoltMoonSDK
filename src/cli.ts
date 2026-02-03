@@ -69,21 +69,45 @@ program.command('launch')
     .requiredOption('-s, --symbol <string>', 'Token symbol')
     .requiredOption('-d, --description <string>', 'Token description')
     .option('-w, --website <string>', 'Website URL')
+    .option('--twitter <string>', 'Twitter/X URL')
+    .option('--telegram <string>', 'Telegram URL')
+    .option('--discord <string>', 'Discord URL')
+    .option('--image <pathOrDataUrl>', 'Local image path or data URL')
     .option('--seed <amount>', 'Seed liquidity in USDC', '100')
+    .option('--dry-run', 'Validate/upload metadata + build intents without sending tx')
     .option('--json', 'Output result as JSON')
     .action(async (options) => {
         const global = program.opts<CliOptions>();
         try {
-            const sdk = createSDK(global, true);
-            const result = await sdk.launchToken({
+            const sdk = createSDK(global, !options.dryRun);
+            const launchParams = {
                 name: options.name,
                 symbol: options.symbol,
                 description: options.description,
                 seedAmount: options.seed,
+                imageFile: options.image,
                 socials: {
-                    website: options.website
+                    website: options.website,
+                    twitter: options.twitter,
+                    telegram: options.telegram,
+                    discord: options.discord
                 }
-            });
+            };
+
+            if (options.dryRun) {
+                const prep = await sdk.prepareLaunchToken(launchParams);
+                if (options.json) {
+                    console.log(JSON.stringify({ success: true, dryRun: true, ...prep }));
+                    return;
+                }
+                console.log('Dry run OK.');
+                console.log(`Approve intent to: ${prep.approveIntent.to}`);
+                console.log(`Create intent to: ${prep.createIntent.to}`);
+                if (prep.imageUrl) console.log(`Uploaded image: ${prep.imageUrl}`);
+                return;
+            }
+
+            const result = await sdk.launchToken(launchParams);
 
             if (options.json) {
                 console.log(JSON.stringify({ success: true, ...result }));

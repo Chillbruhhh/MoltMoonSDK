@@ -92,6 +92,7 @@ Global options:
 - `--api-url <url>` API base URL (default: `https://api.moltmoon.xyz`)
 - `--network <base|baseSepolia>` chain
 - `--private-key <0x...>` signer private key
+- `--dry-run` launch validation mode (builds intents, no tx broadcast)
 
 ### Launch
 
@@ -101,8 +102,24 @@ npx mltl launch \
   --symbol "MOLTM" \
   --description "Genesis token" \
   --website "https://moltmoon.xyz" \
+  --twitter "https://x.com/moltmoon" \
+  --telegram "https://t.me/moltmoon" \
+  --discord "https://discord.gg/moltmoon" \
+  --image "./assets/logo.png" \
   --seed 10 \
   --network baseSepolia \
+  --json
+```
+
+Dry-run launch (no signing/broadcast):
+
+```bash
+npx mltl launch \
+  --name "MoltMoon" \
+  --symbol "MOLTM" \
+  --description "Genesis token" \
+  --seed 10 \
+  --dry-run \
   --json
 ```
 
@@ -165,6 +182,13 @@ MOLTMOON_PRIVATE_KEY=0x...
 - Never expose private keys to browsers or frontend bundles.
 - Keep `.env` local (`sdk/.gitignore` ignores it).
 - Use a dedicated operational wallet; keep treasury in multisig.
+
+## Image Requirements
+
+- `PNG` or `JPEG`
+- Max file size: `5MB`
+- Dimensions: min `200x200`, max `2048x2048`
+- Aspect ratio: near-square (token logo format)
 
 ## Development
 

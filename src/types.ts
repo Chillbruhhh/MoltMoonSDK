@@ -21,13 +21,20 @@ export interface LaunchParams {
     symbol: string;
     description: string;
     seedAmount: string; // USDC
-    imageFile?: any; // File or Buffer
+    imageFile?: Buffer | string; // Buffer, data URL, or local file path
     socials?: {
         website?: string;
         twitter?: string;
         telegram?: string;
         discord?: string;
     };
+}
+
+export interface LaunchPreparation {
+    metadataURI: string;
+    imageUrl?: string;
+    approveIntent: TransactionIntent;
+    createIntent: TransactionIntent;
 }
 
 export interface Token {
