@@ -1,4 +1,4 @@
-import { createWalletClient, http, publicActions, type WalletClient, type PublicClient, type Account, type Chain } from 'viem';
+import { createWalletClient, http, publicActions, parseUnits, formatUnits, type WalletClient, type PublicClient, type Account, type Chain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, baseSepolia } from 'viem/chains';
 import fetch from 'isomorphic-fetch';
@@ -317,11 +317,28 @@ export class MoltmoonSDK {
      * Handles: Approve USDC -> Buy
      */
     async buy(marketAddress: string, usdcIn: string, slippageBps = 500): Promise<string> {
+        const usdcInWei = parseUnits(String(usdcIn), 6);
+        let approveWei = usdcInWei;
+
+        // Some market implementations pull more than the nominal input (e.g., fee-inclusive transfer).
+        // Approve quote-aware amount with a small cushion to avoid allowance reverts.
+        try {
+            const quote = await this.getQuoteBuy(marketAddress, usdcIn);
+            const feeWei = parseUnits(String(quote.feePaid || '0'), 6);
+            approveWei = usdcInWei + feeWei;
+        } catch {
+            // If quote lookup fails, keep using usdcIn as baseline.
+            approveWei = usdcInWei;
+        }
+        const cushionWei = usdcInWei / 10n; // +10%
+        approveWei += cushionWei > 0n ? cushionWei : 1n;
+        const approveAmount = formatUnits(approveWei, 6);
+
         // 1. Approve USDC
         const approveIntent = await this.request<TransactionIntent>(`/intent/markets/${marketAddress}/approve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount: usdcIn })
+            body: JSON.stringify({ amount: approveAmount })
         });
         await this.executeIntent(approveIntent);
 
