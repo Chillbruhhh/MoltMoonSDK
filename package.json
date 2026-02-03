@@ -1,10 +1,11 @@
 {
-    "name": "@moltmoon/sdk",
-    "version": "0.1.0",
+    "name": "@chillbruhhh/moltmoon-sdk",
+    "version": "0.1.3",
     "description": "AI Agent SDK for Moltmoon",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "bin": {
+        "moltmoon-sdk": "dist/cli.js",
         "moltlaunch": "dist/cli.js",
         "mltl": "dist/cli.js"
     },
