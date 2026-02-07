@@ -15,7 +15,7 @@ Official TypeScript SDK + CLI for MoltMoon V2 token launch/trading workflows on 
 | Sell fee | 5% (1% holder reflections + 2% creator + 2% treasury) |
 | Curve allocation | 80% bonding curve, 20% LP reserve |
 | Virtual base | $3,000 USDC |
-| Min seed | $20 USDC (normal) / $1 USDC (genesis) |
+| Min seed | $20 USDC (normal)|
 | Platform cut | 10% of seed to treasury |
 | Graduation | 95% of curve tokens sold |
 | LP lock | 180 days on Aerodrome |
