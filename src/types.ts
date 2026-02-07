@@ -47,25 +47,52 @@ export interface Token {
     curveTokens: string;
     creator: string;
     blockNumber: string;
-    raised?: number; // Helper stat
-    marketCap?: number; // Helper stat
+    rewardsPool?: string;
+    seedAmount?: string;
+    raised?: number;
+    marketCap?: number;
 }
 
 export interface MarketDetails {
     market: string;
     token: string;
+    usdc: string;
     graduated: boolean;
     curveTokensRemaining: string;
     baseReserveReal: string;
     totalBaseReserve: string;
-    progressPercent: number;
+    virtualBase: string;
+    liquidityTokens: string;
     sellFeeBps: number;
+    creator: string;
+    holderRewardsPool: string;
+    aerodromePool: string | null;
+    progressPercent: number;
 }
 
 export interface QuoteResponse {
     amountIn: string;
     amountOut: string;
     feePaid: string;
+}
+
+export interface RewardsEarned {
+    pool: string;
+    account: string;
+    earned: string;      // USDC formatted (6 decimals)
+    earnedRaw: string;   // raw wei string
+}
+
+export interface MigrationStatus {
+    migrationContract: string;
+    active: boolean;
+    oldToken: string;
+    newToken: string;
+    totalMigrated: string;
+    totalMigratedRaw: string;
+    remaining: string;
+    remainingRaw: string;
+    deadline: number;       // unix timestamp
 }
 
 export interface TransactionIntent {

@@ -10,6 +10,8 @@ import {
     Token,
     MarketDetails,
     QuoteResponse,
+    RewardsEarned,
+    MigrationStatus,
     TransactionIntent,
 } from './types';
 
@@ -182,7 +184,7 @@ export class MoltmoonSDK {
             name: params.name.trim(),
             symbol: params.symbol.trim(),
             description: params.description.trim(),
-            external_url: 'https://moltmoon.xyz',
+            external_url: 'https://moltmoon.ai',
             platform: 'Built with MoltMoon SDK'
         };
 
@@ -269,6 +271,49 @@ export class MoltmoonSDK {
     calculateMarketCap(details: MarketDetails): number {
         // baseReserveReal is 6 decimals USDC
         return Number(details.baseReserveReal) / 1000000;
+    }
+
+    // =========================================================================
+    // Rewards Methods
+    // =========================================================================
+
+    async getRewardsEarned(poolAddress: string, account: string): Promise<RewardsEarned> {
+        return this.request<RewardsEarned>(`/rewards/${poolAddress}/earned?account=${account}`);
+    }
+
+    async claimRewards(poolAddress: string): Promise<string> {
+        const intent = await this.request<TransactionIntent>(`/intent/rewards/${poolAddress}/claim`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        return this.executeIntent(intent);
+    }
+
+    // =========================================================================
+    // Migration Methods
+    // =========================================================================
+
+    async getMigrationStatus(): Promise<MigrationStatus> {
+        return this.request<MigrationStatus>('/migration/status');
+    }
+
+    async migrate(v1Amount: string): Promise<string> {
+        // 1. Approve V1 tokens to migration contract
+        const approveIntent = await this.request<TransactionIntent>('/intent/migration/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: v1Amount })
+        });
+        await this.executeIntent(approveIntent);
+
+        // 2. Execute migration
+        const migrateIntent = await this.request<TransactionIntent>('/intent/migration/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: v1Amount })
+        });
+        return this.executeIntent(migrateIntent);
     }
 
     // =========================================================================

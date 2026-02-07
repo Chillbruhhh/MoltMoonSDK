@@ -12,7 +12,7 @@ type CliOptions = {
     privateKey?: string;
 };
 
-const DEFAULT_API_URL = 'https://api.moltmoon.xyz';
+const DEFAULT_API_URL = 'https://api.moltmoon.ai';
 
 function fail(message: string, asJson = false): never {
     if (asJson) {
@@ -61,7 +61,7 @@ program
     .name('moltlaunch')
     .description('Moltmoon Launchpad CLI')
     .version('0.2.0')
-    .option('--api-url <url>', 'API base URL (default: https://api.moltmoon.xyz)')
+    .option('--api-url <url>', 'API base URL (default: https://api.moltmoon.ai)')
     .option('--network <network>', 'base')
     .option('--private-key <hex>', 'Signer private key (0x...)');
 
@@ -225,6 +225,85 @@ program.command('quote-sell')
                 return;
             }
             console.log(`Out: ${quote.amountOut} | Fee: ${quote.feePaid}`);
+        } catch (error: any) {
+            fail(error.message, options.json);
+        }
+    });
+
+program.command('rewards-earned')
+    .description('Check unclaimed USDC rewards for $MOLTM holders')
+    .requiredOption('--pool <address>', 'HolderRewardsPool address')
+    .requiredOption('--account <address>', 'Wallet address to check')
+    .option('--json', 'Output result as JSON')
+    .action(async (options) => {
+        const global = program.opts<CliOptions>();
+        try {
+            const sdk = createSDK(global);
+            const result = await sdk.getRewardsEarned(options.pool, options.account);
+            if (options.json) {
+                console.log(JSON.stringify({ success: true, ...result }));
+                return;
+            }
+            console.log(`Earned: ${result.earned} USDC (${result.pool})`);
+        } catch (error: any) {
+            fail(error.message, options.json);
+        }
+    });
+
+program.command('rewards-claim')
+    .description('Claim unclaimed USDC rewards')
+    .requiredOption('--pool <address>', 'HolderRewardsPool address')
+    .option('--json', 'Output result as JSON')
+    .action(async (options) => {
+        const global = program.opts<CliOptions>();
+        try {
+            const sdk = createSDK(global, true);
+            const hash = await sdk.claimRewards(options.pool);
+            if (options.json) {
+                console.log(JSON.stringify({ success: true, hash }));
+                return;
+            }
+            console.log(`Claim tx: ${hash}`);
+        } catch (error: any) {
+            fail(error.message, options.json);
+        }
+    });
+
+program.command('migration-status')
+    .description('Check V1 → V2 token migration status')
+    .option('--json', 'Output result as JSON')
+    .action(async (options) => {
+        const global = program.opts<CliOptions>();
+        try {
+            const sdk = createSDK(global);
+            const status = await sdk.getMigrationStatus();
+            if (options.json) {
+                console.log(JSON.stringify({ success: true, ...status }));
+                return;
+            }
+            console.log(`Migration: ${status.active ? 'ACTIVE' : 'INACTIVE'}`);
+            console.log(`Migrated: ${status.totalMigrated} tokens`);
+            console.log(`Remaining: ${status.remaining} tokens`);
+            console.log(`Deadline: ${new Date(status.deadline * 1000).toISOString()}`);
+        } catch (error: any) {
+            fail(error.message, options.json);
+        }
+    });
+
+program.command('migrate')
+    .description('Migrate V1 tokens to V2')
+    .requiredOption('--amount <tokens>', 'V1 token amount to migrate')
+    .option('--json', 'Output result as JSON')
+    .action(async (options) => {
+        const global = program.opts<CliOptions>();
+        try {
+            const sdk = createSDK(global, true);
+            const hash = await sdk.migrate(options.amount);
+            if (options.json) {
+                console.log(JSON.stringify({ success: true, hash }));
+                return;
+            }
+            console.log(`Migration tx: ${hash}`);
         } catch (error: any) {
             fail(error.message, options.json);
         }

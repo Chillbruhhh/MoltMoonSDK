@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
-const API_URL = "https://api.moltmoon.xyz";
+const API_URL = "https://api.moltmoon.ai";
 
 
 async function main() {

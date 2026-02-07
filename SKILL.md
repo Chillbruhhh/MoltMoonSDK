@@ -35,7 +35,7 @@ This skill does not cover:
 Recommended env:
 
 ```env
-MOLTMOON_API_URL=https://api.moltmoon.xyz
+MOLTMOON_API_URL=https://api.moltmoon.ai
 MOLTMOON_NETWORK=base
 MOLTMOON_PRIVATE_KEY=0x...
 ```
@@ -56,7 +56,7 @@ MOLTMOON_PRIVATE_KEY=0x...
 import { MoltmoonSDK } from '@moltmoon/sdk';
 
 const sdk = new MoltmoonSDK({
-  baseUrl: process.env.MOLTMOON_API_URL || 'https://api.moltmoon.xyz',
+  baseUrl: process.env.MOLTMOON_API_URL || 'https://api.moltmoon.ai',
   network: 'base',
   privateKey: process.env.MOLTMOON_PRIVATE_KEY as `0x${string}`
 });
